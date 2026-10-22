@@ -1,0 +1,1108 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>Між Нами — Гра для двох ✨</title>
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <style>
+        :root {
+            --bg-gradient: linear-gradient(135deg, #09070f 0%, #160e25 50%, #09070f 100%);
+            --primary: #ff477e;
+            --primary-glow: rgba(255, 71, 126, 0.3);
+            --secondary: #8a4fff;
+            --secondary-glow: rgba(138, 79, 255, 0.3);
+            --card-bg: linear-gradient(135deg, #1d1233 0%, #0a0514 100%);
+            --text-main: #ffffff;
+            --text-muted: #a496bd;
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background: var(--bg-gradient); color: var(--text-main);
+            min-height: 100vh; display: flex; flex-direction: column;
+            align-items: center; justify-content: space-between; padding: 30px 20px; overflow-x: hidden;
+        }
+        header { text-align: center; width: 100%; }
+        header h1 {
+            font-size: 24px; font-weight: 900;
+            background: linear-gradient(90deg, var(--primary), var(--secondary));
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent; margin-bottom: 4px;
+        }
+        .turn-indicator {
+            background: linear-gradient(90deg, rgba(255, 71, 126, 0.15), rgba(138, 79, 255, 0.15));
+            border: 1px solid var(--secondary); padding: 10px 20px; border-radius: 15px;
+            font-size: 14px; font-weight: 700; color: #ffffff; margin: 10px 0;
+            letter-spacing: 0.5px; box-shadow: 0 0 15px var(--secondary-glow); text-transform: uppercase;
+        }
+        .progress {
+            font-size: 13px; font-weight: 600; color: var(--text-muted);
+            background: rgba(255, 255, 255, 0.05); padding: 6px 14px; border-radius: 20px; border: 1px solid rgba(255, 255, 255, 0.08); display: inline-block;
+        }
+        .progress span { color: var(--primary); font-weight: 800; }
+        .card-zone { perspective: 1200px; width: 100%; max-width: 340px; height: 270px; margin: auto 0; }
+        .card { width: 100%; height: 100%; position: relative; transform-style: preserve-3d; transition: transform 0.6s cubic-bezier(0.2, 0.8, 0.2, 1); cursor: pointer; }
+        .card.flipped { transform: rotateY(180deg); }
+        .card-side {
+            position: absolute; width: 100%; height: 100%; backface-visibility: hidden; border-radius: 28px;
+            display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 25px;
+            text-align: center; box-shadow: 0 15px 35px rgba(0, 0, 0, 0.5); box-sizing: border-box;
+        }
+        .card-front { background: var(--card-bg); border: 2px solid var(--primary); box-shadow: 0 0 25px var(--primary-glow); }
+        .card-front .icon { font-size: 50px; margin-bottom: 10px; animation: pulse 2.5s infinite ease-in-out; }
+        .card-front span { font-size: 11px; letter-spacing: 2px; color: var(--primary); font-weight: 800; text-transform: uppercase; }
+        .card-back { background: #ffffff; color: #120c1f; transform: rotateY(180deg); border: 2px solid var(--secondary); font-size: 17px; font-weight: 600; line-height: 1.5; justify-content: space-between; }
+        .btn-copy-text { background: #f0e6ff; color: #8a4fff; border: none; padding: 6px 14px; border-radius: 12px; font-size: 11px; font-weight: bold; cursor: pointer; margin-top: 10px; transition: all 0.2s; }
+        .btn-copy-text:active { transform: scale(0.95); background: #e2d1ff; }
+        .card-back .hint { font-size: 10px; color: #a099b0; font-weight: 400; margin-top: 5px; }
+        .btn-zone { width: 100%; max-width: 340px; display: flex; flex-direction: column; gap: 12px; }
+        .button { width: 100%; padding: 16px; font-size: 15px; font-weight: 700; border: none; border-radius: 50px; cursor: pointer; transition: all 0.2s ease; display: flex; align-items: center; justify-content: center; gap: 8px; }
+        .btn-next { background: linear-gradient(90deg, var(--primary), var(--secondary)); color: white; box-shadow: 0 8px 20px rgba(255, 71, 126, 0.3); }
+        .btn-next:active { transform: scale(0.98); }
+        .btn-history { background: rgba(255, 255, 255, 0.06); color: var(--text-main); border: 1px solid rgba(255, 255, 255, 0.1); }
+        .history-box { display: none; width: 100%; max-width: 340px; background: #110b21; border: 1px solid var(--secondary); border-radius: 20px; padding: 20px; margin-top: 20px; box-sizing: border-box; max-height: 200px; overflow-y: auto; }
+        .history-title { font-size: 16px; font-weight: bold; color: var(--secondary); margin-bottom: 15px; display: flex; justify-content: space-between; }
+        .history-item { font-size: 14px; color: #d1c7e3; padding: 10px 0; border-bottom: 1px solid rgba(255, 255, 255, 0.05); line-height: 1.4; }
+        .btn-reset { background: transparent; color: var(--primary); border: none; font-size: 12px; cursor: pointer; margin-top: 15px; text-decoration: underline; }
+
+        .card-back #display-text { max-width: 290px; }
+        .card-back #display-category { margin-bottom: 4px; }
+        button:focus-visible, .card:focus-visible { outline: 3px solid rgba(255,255,255,0.8); outline-offset: 3px; }
+        @media (prefers-reduced-motion: reduce) {
+            .card, .button, .btn-copy-text { transition: none; }
+            .card-front .icon { animation: none; }
+        }
+
+        .setup-screen {
+            position: fixed; inset: 0; z-index: 1000;
+            background: var(--bg-gradient);
+            display: flex; align-items: center; justify-content: center;
+            padding: 24px;
+        }
+        .setup-card {
+            width: 100%; max-width: 420px;
+            background: rgba(17, 11, 33, 0.96);
+            border: 1px solid rgba(255,255,255,0.12);
+            border-radius: 28px; padding: 26px 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+        }
+        .setup-card h2 {
+            text-align: center; font-size: 24px; margin-bottom: 6px;
+        }
+        .setup-subtitle {
+            text-align: center; color: var(--text-muted);
+            font-size: 13px; line-height: 1.5; margin-bottom: 20px;
+        }
+        .category-list { display: flex; flex-direction: column; gap: 9px; }
+        .category-option {
+            display: flex; align-items: center; gap: 12px;
+            padding: 13px 14px; border-radius: 16px;
+            border: 1px solid rgba(255,255,255,0.09);
+            background: rgba(255,255,255,0.045);
+            cursor: pointer; transition: .2s;
+        }
+        .category-option.selected {
+            border-color: var(--primary);
+            background: rgba(255,71,126,0.10);
+        }
+        .category-option input {
+            width: 20px; height: 20px; accent-color: var(--primary);
+            flex: 0 0 auto;
+        }
+        .category-info { flex: 1; }
+        .category-name { font-size: 14px; font-weight: 750; }
+        .category-count { color: var(--text-muted); font-size: 11px; margin-top: 2px; }
+        .setup-actions { display: flex; gap: 10px; margin-top: 18px; }
+        .setup-actions .button { flex: 1; }
+        .btn-select-all {
+            background: rgba(255,255,255,0.07); color: white;
+            border: 1px solid rgba(255,255,255,0.1);
+        }
+        .selected-summary {
+            text-align: center; color: var(--text-muted);
+            font-size: 12px; margin-top: 13px;
+        }
+
+        @keyframes pulse { 0% { transform: scale(1); } 50% { transform: scale(1.05); } 100% { transform: scale(1); } }
+    </style>
+</head>
+<body>
+
+    <div class="setup-screen" id="setupScreen">
+        <div class="setup-card">
+            <h2>🌙 Місяць & ☀️ Сонце</h2>
+            <div class="setup-subtitle">
+                Перед початком оберіть теми, які хочете бачити в грі.
+                Картки випадатимуть випадково й не повторюватимуться. Будь-яке запитання можна пропустити.
+            </div>
+            <div class="category-list" id="categoryList"></div>
+            <div class="selected-summary" id="selectedSummary"></div>
+            <div class="setup-actions">
+                <button class="button btn-select-all" onclick="selectAllCategories()">☑️ Усі теми</button>
+                <button class="button btn-next" onclick="startGame()">❤️ Почати гру</button>
+            </div>
+        </div>
+    </div>
+
+    <header>
+        <h1>МІЖ НАМИ</h1>
+        <div class="turn-indicator" id="turnText">🌙 Місяць — починаємо</div>
+        <div class="progress">Пройдено: <span id="counter">0 із 150</span></div>
+    </header>
+    <div class="card-zone">
+        <div class="card" id="gameCard" onclick="toggleFlipCard(event)">
+            <div class="card-side card-front"><div class="icon">❤️</div><span>Торкнись картки</span></div>
+            <div class="card-side card-back">
+                <div style="font-size: 20px;">💬</div>
+                <div id="display-category" style="font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em;"></div>
+                <div id="display-text">Готові дізнатися більше одне про одного? Натисни кнопку знизу!</div>
+                <button class="btn-copy-text" id="copyBtn" onclick="copyCurrentQuestion(event)" style="display:none;">📋 Скопіювати в чат</button>
+                <div class="hint">натисни на картку, щоб сховати</div>
+            </div>
+        </div>
+    </div>
+    <div class="btn-zone">
+        <button class="button btn-next" onclick="getNewQuestion()">🎲 Наступна картка</button>
+        <button class="button btn-history" onclick="toggleHistoryZone()">📜 Історія питань</button>
+    </div>
+    <div class="history-box" id="history-section">
+        <div class="history-title"><span>Пройдені теми:</span><span style="cursor:pointer;" onclick="toggleHistoryZone()">✕</span></div>
+        <div id="history-content">Тут поки порожньо.</div>
+        <button class="btn-reset" onclick="clearAllProgress()">Скинути гру спочатку</button>
+    </div>
+    <script>
+        var tg = window.Telegram ? window.Telegram.WebApp : null;
+        if (tg) tg.ready();
+        function triggerVibration() { if (tg && tg.HapticFeedback) { tg.HapticFeedback.impactOccurred('medium'); } }
+
+        var mainQuestionsList = [
+    {
+        "category": "💭 Спогади та історія",
+        "text": "Що ти подумав(-ла) про мене, коли вперше мене побачив(-ла)?"
+    },
+    {
+        "category": "💭 Спогади та історія",
+        "text": "Що ти розповів(-ла) друзям після нашого першого побачення?"
+    },
+    {
+        "category": "💭 Спогади та історія",
+        "text": "Коли ти вперше розповів(-ла) батькам про мене і як це було?"
+    },
+    {
+        "category": "💭 Спогади та історія",
+        "text": "Який наш спільний спогад викликає в тебе найбільше тепла?"
+    },
+    {
+        "category": "💭 Спогади та історія",
+        "text": "Яким був наш перший поцілунок у твоїх очах?"
+    },
+    {
+        "category": "💭 Спогади та історія",
+        "text": "У який момент ти зрозумів(-ла), що наші стосунки стали серйозними?"
+    },
+    {
+        "category": "💭 Спогади та історія",
+        "text": "Коли ти відчував(-ла) найбільшу закоханість у мене?"
+    },
+    {
+        "category": "💭 Спогади та історія",
+        "text": "Який мій вчинок найбільше тебе розчулив?"
+    },
+    {
+        "category": "💭 Спогади та історія",
+        "text": "Який момент у наших стосунках ти хотів(-ла) б пережити ще раз?"
+    },
+    {
+        "category": "💭 Спогади та історія",
+        "text": "Який найсмішніший спогад про нас ти часто згадуєш?"
+    },
+    {
+        "category": "💭 Спогади та історія",
+        "text": "Яка маленька деталь нашої історії особливо дорога тобі?"
+    },
+    {
+        "category": "💭 Спогади та історія",
+        "text": "Який період наших стосунків був для тебе найскладнішим і чому?"
+    },
+    {
+        "category": "💭 Спогади та історія",
+        "text": "Який наш спільний досвід найбільше нас зблизив?"
+    },
+    {
+        "category": "💭 Спогади та історія",
+        "text": "Який момент змусив тебе пишатися мною?"
+    },
+    {
+        "category": "💭 Спогади та історія",
+        "text": "Що в нашій історії кохання здивувало тебе найбільше?"
+    },
+    {
+        "category": "❤️ Почуття та вдячність",
+        "text": "За що ти пишаєшся мною?"
+    },
+    {
+        "category": "❤️ Почуття та вдячність",
+        "text": "Які три речі в наших стосунках роблять тебе щасливим(-ою)?"
+    },
+    {
+        "category": "❤️ Почуття та вдячність",
+        "text": "За що ти вдячний(-а) мені, але рідко говориш уголос?"
+    },
+    {
+        "category": "❤️ Почуття та вдячність",
+        "text": "Які мої риси ти найбільше цінуєш?"
+    },
+    {
+        "category": "❤️ Почуття та вдячність",
+        "text": "Що в мені надихає тебе ставати кращою версією себе?"
+    },
+    {
+        "category": "❤️ Почуття та вдячність",
+        "text": "Які маленькі прояви уваги від мене тобі особливо приємні?"
+    },
+    {
+        "category": "❤️ Почуття та вдячність",
+        "text": "Коли поруч зі мною ти почуваєшся найбільш коханим(-ою)?"
+    },
+    {
+        "category": "❤️ Почуття та вдячність",
+        "text": "Що я роблю такого, від чого ти почуваєшся важливим(-ою)?"
+    },
+    {
+        "category": "❤️ Почуття та вдячність",
+        "text": "Які слова від мене ти хотів(-ла) б чути частіше?"
+    },
+    {
+        "category": "❤️ Почуття та вдячність",
+        "text": "Який мій прояв турботи найкраще підтримує тебе?"
+    },
+    {
+        "category": "❤️ Почуття та вдячність",
+        "text": "Які три слова найкраще описують мене для тебе і чому?"
+    },
+    {
+        "category": "❤️ Почуття та вдячність",
+        "text": "Як би ти описав(-ла) мене людині, яка ніколи зі мною не зустрічалася?"
+    },
+    {
+        "category": "❤️ Почуття та вдячність",
+        "text": "Що в наших стосунках викликає в тебе відчуття спокою?"
+    },
+    {
+        "category": "❤️ Почуття та вдячність",
+        "text": "Що я роблю, що може розсмішити тебе навіть у поганий день?"
+    },
+    {
+        "category": "❤️ Почуття та вдячність",
+        "text": "Яку мою сильну сторону ти хотів(-ла) б перейняти?"
+    },
+    {
+        "category": "🗣️ Спілкування та конфлікти",
+        "text": "Що допомагає тобі почуватися почутим(-ою) під час складної розмови?"
+    },
+    {
+        "category": "🗣️ Спілкування та конфлікти",
+        "text": "Що я можу робити інакше, щоб наші суперечки були спокійнішими?"
+    },
+    {
+        "category": "🗣️ Спілкування та конфлікти",
+        "text": "Яка тема дається тобі найважче для обговорення зі мною?"
+    },
+    {
+        "category": "🗣️ Спілкування та конфлікти",
+        "text": "Що зазвичай стоїть за твоїм роздратуванням під час наших сварок?"
+    },
+    {
+        "category": "🗣️ Спілкування та конфлікти",
+        "text": "Як ти волієш миритися після конфлікту: поговорити одразу чи взяти паузу?"
+    },
+    {
+        "category": "🗣️ Спілкування та конфлікти",
+        "text": "Які мої слова або дії можуть ненавмисно тебе ранити?"
+    },
+    {
+        "category": "🗣️ Спілкування та конфлікти",
+        "text": "Як мені показати, що я хочу зрозуміти тебе, а не перемогти в суперечці?"
+    },
+    {
+        "category": "🗣️ Спілкування та конфлікти",
+        "text": "Що нам варто змінити у способі розв’язання конфліктів?"
+    },
+    {
+        "category": "🗣️ Спілкування та конфлікти",
+        "text": "Чи є проблема, яку ми постійно обговорюємо, але так і не вирішили?"
+    },
+    {
+        "category": "🗣️ Спілкування та конфлікти",
+        "text": "Як ти розумієш щире вибачення?"
+    },
+    {
+        "category": "🗣️ Спілкування та конфлікти",
+        "text": "Що допомагає тобі знову відчути близькість після сварки?"
+    },
+    {
+        "category": "🗣️ Спілкування та конфлікти",
+        "text": "Коли ти мовчиш, тобі зазвичай потрібен простір чи підтримка?"
+    },
+    {
+        "category": "🗣️ Спілкування та конфлікти",
+        "text": "Як мені запитати про твій стан так, щоб ти не відчував(-ла) тиску?"
+    },
+    {
+        "category": "🗣️ Спілкування та конфлікти",
+        "text": "Яку мою звичку тобі важко приймати, і як ми могли б із цим упоратися?"
+    },
+    {
+        "category": "🗣️ Спілкування та конфлікти",
+        "text": "Що ти хотів(-ла) б, щоб я краще розумів(-ла) про твої реакції?"
+    },
+    {
+        "category": "🛡️ Довіра та особисті межі",
+        "text": "Наскільки ти довіряєш мені за шкалою від 1 до 10 і чому?"
+    },
+    {
+        "category": "🛡️ Довіра та особисті межі",
+        "text": "Що допомагає тобі довіряти партнеру?"
+    },
+    {
+        "category": "🛡️ Довіра та особисті межі",
+        "text": "Що може похитнути твою довіру у стосунках?"
+    },
+    {
+        "category": "🛡️ Довіра та особисті межі",
+        "text": "Які особисті межі для тебе особливо важливі?"
+    },
+    {
+        "category": "🛡️ Довіра та особисті межі",
+        "text": "Чи буває, що я ненавмисно порушую твої межі? Якщо так, то як саме?"
+    },
+    {
+        "category": "🛡️ Довіра та особисті межі",
+        "text": "Що для тебе означає бути вірним(-ою) партнеру?"
+    },
+    {
+        "category": "🛡️ Довіра та особисті межі",
+        "text": "Які речі ти вважаєш приватними навіть у близьких стосунках?"
+    },
+    {
+        "category": "🛡️ Довіра та особисті межі",
+        "text": "Як ти ставишся до того, щоб партнери знали паролі одне одного?"
+    },
+    {
+        "category": "🛡️ Довіра та особисті межі",
+        "text": "Який рівень особистого простору тобі потрібен у стосунках?"
+    },
+    {
+        "category": "🛡️ Довіра та особисті межі",
+        "text": "Чи легко тобі сказати мені «ні», коли чогось не хочеш?"
+    },
+    {
+        "category": "🛡️ Довіра та особисті межі",
+        "text": "Що допомогло б тобі почуватися безпечніше поруч зі мною?"
+    },
+    {
+        "category": "🛡️ Довіра та особисті межі",
+        "text": "Як ти хотів(-ла) б, щоб ми говорили про ревнощі?"
+    },
+    {
+        "category": "🛡️ Довіра та особисті межі",
+        "text": "Чи є щось, у чому тобі хотілося б більше моєї чесності?"
+    },
+    {
+        "category": "🛡️ Довіра та особисті межі",
+        "text": "Що для тебе є неприйнятним у конфліктах?"
+    },
+    {
+        "category": "🛡️ Довіра та особисті межі",
+        "text": "Яку поведінку ти вважаєш маніпуляцією у стосунках?"
+    },
+    {
+        "category": "🌱 Особистість, дитинство та мрії",
+        "text": "Яка подія дитинства найбільше вплинула на те, ким ти став(-ла)?"
+    },
+    {
+        "category": "🌱 Особистість, дитинство та мрії",
+        "text": "Який твій найцінніший спогад із дитинства?"
+    },
+    {
+        "category": "🌱 Особистість, дитинство та мрії",
+        "text": "Якою була твоя дитяча мрія, що досі не здійснилася?"
+    },
+    {
+        "category": "🌱 Особистість, дитинство та мрії",
+        "text": "Яке своє досягнення ти вважаєш найважливішим?"
+    },
+    {
+        "category": "🌱 Особистість, дитинство та мрії",
+        "text": "За що у своєму житті ти найбільше вдячний(-а)?"
+    },
+    {
+        "category": "🌱 Особистість, дитинство та мрії",
+        "text": "Яку свою слабку сторону ти хотів(-ла) б краще зрозуміти?"
+    },
+    {
+        "category": "🌱 Особистість, дитинство та мрії",
+        "text": "Коли востаннє ти шкодував(-ла) про власну поведінку і чого навчився(-лася)?"
+    },
+    {
+        "category": "🌱 Особистість, дитинство та мрії",
+        "text": "Що робить тебе щасливим(-ою) поза романтичними стосунками?"
+    },
+    {
+        "category": "🌱 Особистість, дитинство та мрії",
+        "text": "Який страх щодо майбутнього ти переживаєш найчастіше?"
+    },
+    {
+        "category": "🌱 Особистість, дитинство та мрії",
+        "text": "Чи є людина з минулого, за якою ти іноді сумуєш, хоча ви більше не спілкуєтеся?"
+    },
+    {
+        "category": "🌱 Особистість, дитинство та мрії",
+        "text": "Який досвід навчив тебе чогось важливого про любов?"
+    },
+    {
+        "category": "🌱 Особистість, дитинство та мрії",
+        "text": "Яка риса характеру допомагає тобі долати труднощі?"
+    },
+    {
+        "category": "🌱 Особистість, дитинство та мрії",
+        "text": "Яку частину свого життя ти хотів(-ла) б змінити, якби міг(-могла) повернутися назад?"
+    },
+    {
+        "category": "🌱 Особистість, дитинство та мрії",
+        "text": "Яка особиста тема дається тобі важко для обговорення, якщо ти готовий(-а) нею поділитися?"
+    },
+    {
+        "category": "🌱 Особистість, дитинство та мрії",
+        "text": "Що ти хотів(-ла) б навчитися робити протягом наступного року?"
+    },
+    {
+        "category": "🔮 Майбутнє та спільне життя",
+        "text": "Яким ти уявляєш наше життя через десять років?"
+    },
+    {
+        "category": "🔮 Майбутнє та спільне життя",
+        "text": "Що для тебе означає щасливе спільне життя?"
+    },
+    {
+        "category": "🔮 Майбутнє та спільне життя",
+        "text": "Які традиції ти хотів(-ла) б створити саме для нас?"
+    },
+    {
+        "category": "🔮 Майбутнє та спільне життя",
+        "text": "Які спільні мрії ти хотів(-ла) б здійснити?"
+    },
+    {
+        "category": "🔮 Майбутнє та спільне життя",
+        "text": "Яким був би твій ідеальний день, проведений зі мною?"
+    },
+    {
+        "category": "🔮 Майбутнє та спільне життя",
+        "text": "Які три речі ти хотів(-ла) б обов’язково зробити разом зі мною?"
+    },
+    {
+        "category": "🔮 Майбутнє та спільне життя",
+        "text": "Які цінності мають бути основою нашої спільної сім’ї?"
+    },
+    {
+        "category": "🔮 Майбутнє та спільне життя",
+        "text": "Як ти уявляєш розподіл побутових обов’язків у спільному житті?"
+    },
+    {
+        "category": "🔮 Майбутнє та спільне життя",
+        "text": "Як ти хотів(-ла) б ухвалювати важливі фінансові рішення разом?"
+    },
+    {
+        "category": "🔮 Майбутнє та спільне життя",
+        "text": "Що для тебе важливо обговорити до спільного проживання або шлюбу?"
+    },
+    {
+        "category": "🔮 Майбутнє та спільне життя",
+        "text": "Яким ти уявляєш весілля, якщо взагалі хочеш його святкувати?"
+    },
+    {
+        "category": "🔮 Майбутнє та спільне життя",
+        "text": "Що ти хотів(-ла) б зберегти у своєму житті навіть після великих змін у стосунках?"
+    },
+    {
+        "category": "🔮 Майбутнє та спільне життя",
+        "text": "Як ти бачиш баланс між часом удвох, друзями та родиною?"
+    },
+    {
+        "category": "🔮 Майбутнє та спільне життя",
+        "text": "Які спільні цілі ми могли б поставити на найближчі шість місяців?"
+    },
+    {
+        "category": "🔮 Майбутнє та спільне життя",
+        "text": "Що могло б зробити наше повсякденне життя приємнішим?"
+    },
+    {
+        "category": "🌙 Відстань та підтримка",
+        "text": "Чого тобі найбільше бракує, коли ми далеко одне від одного?"
+    },
+    {
+        "category": "🌙 Відстань та підтримка",
+        "text": "Що допомагає тобі відчувати близькість, коли ми не можемо бути поруч фізично?"
+    },
+    {
+        "category": "🌙 Відстань та підтримка",
+        "text": "Який формат спілкування на відстані підходить тобі найбільше?"
+    },
+    {
+        "category": "🌙 Відстань та підтримка",
+        "text": "Як часто тобі хотілося б телефонувати або листуватися, щоб відчувати зв’язок?"
+    },
+    {
+        "category": "🌙 Відстань та підтримка",
+        "text": "Що я можу робити на відстані, щоб ти почувався(-лася) коханим(-ою)?"
+    },
+    {
+        "category": "🌙 Відстань та підтримка",
+        "text": "Що найважче для тебе в періоди, коли ми довго не бачимося?"
+    },
+    {
+        "category": "🌙 Відстань та підтримка",
+        "text": "Як нам підтримувати одне одного, коли часові пояси або графіки не збігаються?"
+    },
+    {
+        "category": "🌙 Відстань та підтримка",
+        "text": "Які спільні онлайн-ритуали могли б зробити відстань легшою?"
+    },
+    {
+        "category": "🌙 Відстань та підтримка",
+        "text": "Що ти відчуваєш, коли я довго не відповідаю на повідомлення?"
+    },
+    {
+        "category": "🌙 Відстань та підтримка",
+        "text": "Як нам обговорювати сум і самотність, не звинувачуючи одне одного?"
+    },
+    {
+        "category": "🌙 Відстань та підтримка",
+        "text": "Що допомагає тобі заспокоїтися, коли ти сумуєш за мною?"
+    },
+    {
+        "category": "🌙 Відстань та підтримка",
+        "text": "Який спільний спогад ти згадуєш, коли найбільше хочеш мене обійняти?"
+    },
+    {
+        "category": "🌙 Відстань та підтримка",
+        "text": "Що ми могли б планувати наперед, щоб очікування наступної зустрічі було радісним?"
+    },
+    {
+        "category": "🌙 Відстань та підтримка",
+        "text": "Які непорозуміння найчастіше виникають у нашому спілкуванні на відстані?"
+    },
+    {
+        "category": "🌙 Відстань та підтримка",
+        "text": "Як я можу підтримати тебе, коли в тебе важкий день, а мене немає поруч?"
+    },
+    {
+        "category": "✨ Романтика та щоденна близькість",
+        "text": "Які маленькі прояви романтики тобі подобаються найбільше?"
+    },
+    {
+        "category": "✨ Романтика та щоденна близькість",
+        "text": "Яке прізвисько від мене тобі особливо подобається?"
+    },
+    {
+        "category": "✨ Романтика та щоденна близькість",
+        "text": "Який подарунок приносить тобі найбільше радості: практичний, символічний чи враження?"
+    },
+    {
+        "category": "✨ Романтика та щоденна близькість",
+        "text": "Що я міг(-могла) б робити частіше, щоб ти почувався(-лася) коханим(-ою)?"
+    },
+    {
+        "category": "✨ Романтика та щоденна близькість",
+        "text": "Який для тебе ідеальний романтичний вечір?"
+    },
+    {
+        "category": "✨ Романтика та щоденна близькість",
+        "text": "Які буденні речі в моїй поведінці тебе приваблюють?"
+    },
+    {
+        "category": "✨ Романтика та щоденна близькість",
+        "text": "Що для тебе означають обійми й дотики у стосунках?"
+    },
+    {
+        "category": "✨ Романтика та щоденна близькість",
+        "text": "Який вид турботи ти найбільше цінуєш у повсякденні?"
+    },
+    {
+        "category": "✨ Романтика та щоденна близькість",
+        "text": "Яку спільну активність ти хотів(-ла) б спробувати зі мною?"
+    },
+    {
+        "category": "✨ Романтика та щоденна близькість",
+        "text": "Яке місце ти хотів(-ла) б відвідати разом зі мною?"
+    },
+    {
+        "category": "✨ Романтика та щоденна близькість",
+        "text": "Яка пісня або фільм нагадує тобі про нас?"
+    },
+    {
+        "category": "✨ Романтика та щоденна близькість",
+        "text": "Як ти любиш отримувати підтримку, коли втомився(-лася)?"
+    },
+    {
+        "category": "✨ Романтика та щоденна близькість",
+        "text": "Які компліменти тобі приємніше чути — про зовнішність, характер чи вчинки?"
+    },
+    {
+        "category": "✨ Романтика та щоденна близькість",
+        "text": "Що я роблю такого, що змушує тебе відчути себе особливим(-ою)?"
+    },
+    {
+        "category": "✨ Романтика та щоденна близькість",
+        "text": "Яку приємну несподіванку ти хотів(-ла) б отримати без особливого приводу?"
+    },
+    {
+        "category": "🔥 Інтимність і бажання",
+        "text": "Що допомагає тобі почуватися комфортно й бажано під час інтимної близькості?"
+    },
+    {
+        "category": "🔥 Інтимність і бажання",
+        "text": "Які прояви ніжності тобі найбільше подобаються перед сексом?"
+    },
+    {
+        "category": "🔥 Інтимність і бажання",
+        "text": "Про які свої інтимні бажання тобі хотілося б легше говорити зі мною?"
+    },
+    {
+        "category": "🔥 Інтимність і бажання",
+        "text": "Що я роблю під час близькості, що тобі особливо подобається?"
+    },
+    {
+        "category": "🔥 Інтимність і бажання",
+        "text": "Які дотики тобі найприємніші, а які тобі не до вподоби?"
+    },
+    {
+        "category": "🔥 Інтимність і бажання",
+        "text": "Чи хотів(-ла) б ти, щоб ми більше говорили про те, що нам подобається в сексі?"
+    },
+    {
+        "category": "🔥 Інтимність і бажання",
+        "text": "Які межі та табу для тебе важливо обговорити в інтимному житті?"
+    },
+    {
+        "category": "🔥 Інтимність і бажання",
+        "text": "Який наш інтимний момент запам’ятався тобі найбільше і чому?"
+    },
+    {
+        "category": "🔥 Інтимність і бажання",
+        "text": "Які слова або компліменти під час близькості тобі приємно чути?"
+    },
+    {
+        "category": "🔥 Інтимність і бажання",
+        "text": "Чи подобається тобі, коли партнер проявляє ініціативу, чи ти волієш чергуватися?"
+    },
+    {
+        "category": "🔥 Інтимність і бажання",
+        "text": "Як ти ставишся до обговорення еротичних фантазій без зобов’язання їх втілювати?"
+    },
+    {
+        "category": "🔥 Інтимність і бажання",
+        "text": "Чи є новий вид близькості або ніжності, який ти хотів(-ла) б спробувати, якщо обом буде комфортно?"
+    },
+    {
+        "category": "🔥 Інтимність і бажання",
+        "text": "Які умови допомагають тобі розслабитися й налаштуватися на інтимність?"
+    },
+    {
+        "category": "🔥 Інтимність і бажання",
+        "text": "Як ти хотів(-ла) б, щоб я реагував(-ла), якщо тобі щось не подобається під час сексу?"
+    },
+    {
+        "category": "🔥 Інтимність і бажання",
+        "text": "Чи подобається тобі обмінюватися фліртовими повідомленнями протягом дня?"
+    },
+    {
+        "category": "🧩 Погляди на стосунки",
+        "text": "Що, на твою думку, може найбільше загрожувати нашим стосункам?"
+    },
+    {
+        "category": "🧩 Погляди на стосунки",
+        "text": "Чи був момент, коли ти сумнівався(-лася) в наших стосунках? Що допомогло тобі розібратися в почуттях?"
+    },
+    {
+        "category": "🧩 Погляди на стосунки",
+        "text": "Що тобі було найважче прийняти в наших стосунках?"
+    },
+    {
+        "category": "🧩 Погляди на стосунки",
+        "text": "Які зміни принесли наші стосунки у твоє життя?"
+    },
+    {
+        "category": "🧩 Погляди на стосунки",
+        "text": "Чого ти навчився(-лася) завдяки нашим стосункам?"
+    },
+    {
+        "category": "🧩 Погляди на стосунки",
+        "text": "Які три речі ти хотів(-ла) б покращити у наших стосунках?"
+    },
+    {
+        "category": "🧩 Погляди на стосунки",
+        "text": "Чи є щось, за що ти досі тримаєш образу й хотів(-ла) б обговорити це?"
+    },
+    {
+        "category": "🧩 Погляди на стосунки",
+        "text": "Які вчинки ти вважаєш зрадою, окрім сексуального контакту?"
+    },
+    {
+        "category": "🧩 Погляди на стосунки",
+        "text": "Наскільки важлива для тебе думка друзів про наші стосунки?"
+    },
+    {
+        "category": "🧩 Погляди на стосунки",
+        "text": "Як ти ставишся до флірту з іншими людьми, коли перебуваєш у парі?"
+    },
+    {
+        "category": "🧩 Погляди на стосунки",
+        "text": "Чи важливо для тебе, щоб партнер мав схожі амбіції та життєві цілі?"
+    },
+    {
+        "category": "🧩 Погляди на стосунки",
+        "text": "Наскільки важливі для тебе зовнішність, статус або матеріальне становище партнера?"
+    },
+    {
+        "category": "🧩 Погляди на стосунки",
+        "text": "Як ти розумієш баланс між компромісом і відмовою від власних потреб?"
+    },
+    {
+        "category": "🧩 Погляди на стосунки",
+        "text": "Чи є щось у наших стосунках, що ти боїшся втратити?"
+    },
+    {
+        "category": "🧩 Погляди на стосунки",
+        "text": "Яка поведінка партнера змушує тебе відчувати самотність навіть тоді, коли ви разом?"
+    }
+];
+
+        var playedQuestions = [];
+        var currentActiveQuestion = null;
+
+
+        var categoryOrder = [
+    "💭 Спогади та історія",
+    "❤️ Почуття та вдячність",
+    "🗣️ Спілкування та конфлікти",
+    "🛡️ Довіра та особисті межі",
+    "🌱 Особистість, дитинство та мрії",
+    "🔮 Майбутнє та спільне життя",
+    "🌙 Відстань та підтримка",
+    "✨ Романтика та щоденна близькість",
+    "🔥 Інтимність і бажання",
+    "🧩 Погляди на стосунки"
+];
+
+        var selectedCategories = categoryOrder.slice();
+        var currentTurnIndex = 0;
+        var gameStarted = false;
+
+        function getCategoryCounts() {
+            var counts = {};
+            mainQuestionsList.forEach(function(card) {
+                counts[card.category] = (counts[card.category] || 0) + 1;
+            });
+            return counts;
+        }
+
+        function renderCategoryPicker() {
+            var counts = getCategoryCounts();
+            var container = document.getElementById("categoryList");
+            var html = "";
+
+            categoryOrder.forEach(function(category) {
+                var checked = selectedCategories.indexOf(category) !== -1;
+                var label = category.replace(/^[^ ]+ /, "");
+                html +=
+                    "<label class='category-option " + (checked ? "selected" : "") + "'>" +
+                    "<input type='checkbox' value='" + escapeHtml(category) + "' " +
+                    (checked ? "checked" : "") + " onchange='toggleCategory(this)'>" +
+                    "<div class='category-info'>" +
+                    "<div class='category-name'>" + escapeHtml(category) + "</div>" +
+                    "<div class='category-count'>" + counts[category] + " карток</div>" +
+                    "</div></label>";
+            });
+
+            container.innerHTML = html;
+            updateSelectedSummary();
+        }
+
+        function toggleCategory(input) {
+            var category = input.value;
+            if (input.checked) {
+                if (selectedCategories.indexOf(category) === -1) selectedCategories.push(category);
+            } else {
+                selectedCategories = selectedCategories.filter(function(item) { return item !== category; });
+            }
+
+            var label = input.closest(".category-option");
+            if (label) label.classList.toggle("selected", input.checked);
+            updateSelectedSummary();
+        }
+
+        function selectAllCategories() {
+            selectedCategories = categoryOrder.slice();
+            renderCategoryPicker();
+        }
+
+        function updateSelectedSummary() {
+            var available = mainQuestionsList.filter(function(card) {
+                return selectedCategories.indexOf(card.category) !== -1;
+            }).length;
+            document.getElementById("selectedSummary").innerText =
+                selectedCategories.length + " тем • " + available + " карток у колоді";
+        }
+
+        function startGame() {
+            if (selectedCategories.length === 0) {
+                alert("Оберіть хоча б одну тему ❤️");
+                return;
+            }
+
+            playedQuestions = [];
+            currentActiveQuestion = null;
+            currentTurnIndex = Math.floor(Math.random() * 2);
+            gameStarted = true;
+
+            try {
+                localStorage.removeItem('mizh_nami_history_v4');
+                localStorage.setItem('mizh_nami_categories_v5', JSON.stringify(selectedCategories));
+            } catch(e) {}
+
+            document.getElementById("setupScreen").style.display = "none";
+            document.getElementById("history-section").style.display = "none";
+            document.getElementById("turnText").innerText =
+                "🎲 Хід: " + (currentTurnIndex === 0 ? "Місяць 🌙" : "Сонце ☀️");
+
+            refreshCounterUI();
+            buildHistoryUI();
+            showStartCard();
+        }
+
+        function showStartCard() {
+            var cardElement = document.getElementById("gameCard");
+            cardElement.classList.remove("flipped");
+            document.getElementById("copyBtn").style.display = "none";
+            setTimeout(function() {
+                document.getElementById("display-category").innerText = "❤️ НОВА ГРА";
+                document.getElementById("display-text").innerText =
+                    "Натисніть «Наступна картка», щоб витягнути перше питання.";
+            }, 100);
+        }
+
+        function openSetupScreen() {
+            selectedCategories = categoryOrder.slice();
+            try {
+                var savedCategories = JSON.parse(localStorage.getItem('mizh_nami_categories_v5') || "null");
+                if (Array.isArray(savedCategories) && savedCategories.length) {
+                    selectedCategories = savedCategories.filter(function(c) {
+                        return categoryOrder.indexOf(c) !== -1;
+                    });
+                }
+            } catch(e) {}
+            renderCategoryPicker();
+            document.getElementById("setupScreen").style.display = "flex";
+        }
+
+        function saveProgress() {
+            try {
+                localStorage.setItem('mizh_nami_history_v4', JSON.stringify(playedQuestions));
+            } catch(e) {}
+        }
+
+        function loadProgress() {
+            try {
+                var savedData = localStorage.getItem('mizh_nami_history_v4');
+                if (savedData) {
+                    var parsed = JSON.parse(savedData);
+                    if (Array.isArray(parsed)) {
+                        playedQuestions = parsed.filter(function(item) {
+                            return item && typeof item.text === "string";
+                        });
+                        if (playedQuestions.length > 0) {
+                            currentActiveQuestion = playedQuestions[playedQuestions.length - 1];
+                            showQuestion(currentActiveQuestion);
+                            document.getElementById("turnText").innerText = "🎲 Гра продовжується";
+                        }
+                    }
+                }
+            } catch(e) {
+                console.error(e);
+            }
+        }
+
+        function triggerVibration() {
+            if (tg && tg.HapticFeedback) {
+                try { tg.HapticFeedback.impactOccurred('medium'); } catch(e) {}
+            }
+        }
+
+        function escapeHtml(value) {
+            return String(value).replace(/[&<>"']/g, function(ch) {
+                return {
+                    '&': '&amp;', '<': '&lt;', '>': '&gt;',
+                    '"': '&quot;', "'": '&#039;'
+                }[ch];
+            });
+        }
+
+        function showQuestion(card) {
+            var cardElement = document.getElementById("gameCard");
+            document.getElementById("display-category").innerText = card.category;
+            document.getElementById("display-text").innerText = card.text;
+            document.getElementById("copyBtn").style.display = "inline-block";
+            document.getElementById("copyBtn").innerText = "📋 Скопіювати в чат";
+            cardElement.classList.add("flipped");
+        }
+
+        function toggleFlipCard(event) {
+            if (event.target.id === "copyBtn") return;
+            triggerVibration();
+            document.getElementById("gameCard").classList.toggle("flipped");
+        }
+
+        function getNewQuestion() {
+            triggerVibration();
+
+            if (!gameStarted) {
+                openSetupScreen();
+                return;
+            }
+
+            var playedIds = playedQuestions.map(function(item) { return item.text; });
+            var freshQuestions = mainQuestionsList.filter(function(item) {
+                return selectedCategories.indexOf(item.category) !== -1 &&
+                       playedIds.indexOf(item.text) === -1;
+            });
+
+            var cardElement = document.getElementById("gameCard");
+
+            if (freshQuestions.length === 0) {
+                cardElement.classList.remove("flipped");
+                document.getElementById("copyBtn").style.display = "none";
+                document.getElementById("turnText").innerText = "🎉 Ви пройшли всі вибрані теми!";
+
+                setTimeout(function() {
+                    document.getElementById("display-category").innerText = "❤️ КОЛОДА ЗАВЕРШЕНА";
+                    document.getElementById("display-text").innerHTML =
+                        "<span style='color: var(--primary);'>🎉 Усі вибрані картки пройдені!</span><br><br>" +
+                        "Можете почати нову гру та обрати інші теми.";
+                    cardElement.classList.add("flipped");
+                }, 250);
+                return;
+            }
+
+            var selectedQuestion =
+                freshQuestions[Math.floor(Math.random() * freshQuestions.length)];
+
+            playedQuestions.push(selectedQuestion);
+            currentActiveQuestion = selectedQuestion;
+            saveProgress();
+
+            currentTurnIndex = currentTurnIndex === 0 ? 1 : 0;
+            var currentPlayer = currentTurnIndex === 0 ? "Місяць 🌙" : "Сонце ☀️";
+
+            cardElement.classList.remove("flipped");
+
+            setTimeout(function() {
+                document.getElementById("turnText").innerText = "🎲 Хід: " + currentPlayer;
+                showQuestion(selectedQuestion);
+                refreshCounterUI();
+                buildHistoryUI();
+            }, 250);
+        }
+
+        function copyCurrentQuestion(event) {
+            event.stopPropagation();
+            triggerVibration();
+            if (!currentActiveQuestion) return;
+
+            var textToCopy = currentActiveQuestion.category + "\n\n" + currentActiveQuestion.text;
+            var btn = document.getElementById("copyBtn");
+
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+                navigator.clipboard.writeText(textToCopy).then(function() {
+                    btn.innerText = "✅ Скопійовано!";
+                    setTimeout(function() {
+                        btn.innerText = "📋 Скопіювати в чат";
+                    }, 1500);
+                }).catch(function() {
+                    btn.innerText = "⚠️ Не вдалося";
+                });
+            } else {
+                btn.innerText = "⚠️ Копіювання недоступне";
+            }
+        }
+
+        function refreshCounterUI() {
+            var deckSize = mainQuestionsList.filter(function(card) {
+                return selectedCategories.indexOf(card.category) !== -1;
+            }).length;
+            document.getElementById("counter").innerText =
+                playedQuestions.length + " із " + deckSize;
+        }
+
+        function buildHistoryUI() {
+            if (playedQuestions.length === 0) {
+                document.getElementById("history-content").innerText = "Тут поки порожньо.";
+                return;
+            }
+
+            var htmlList = "";
+            for (var k = playedQuestions.length - 1; k >= 0; k--) {
+                var item = playedQuestions[k];
+                htmlList +=
+                    "<div class='history-item'><b>#" + (k + 1) + "</b> " +
+                    "<span style='color:var(--primary);'>" + escapeHtml(item.category) + "</span><br>" +
+                    escapeHtml(item.text) + "</div>";
+            }
+            document.getElementById("history-content").innerHTML = htmlList;
+        }
+
+        function toggleHistoryZone() {
+            triggerVibration();
+            var box = document.getElementById("history-section");
+            box.style.display = (box.style.display === "block") ? "none" : "block";
+        }
+
+        function clearAllProgress() {
+            triggerVibration();
+            if (confirm("Почати нову гру та знову обрати теми?")) {
+                playedQuestions = [];
+                currentActiveQuestion = null;
+                gameStarted = false;
+                try {
+                    localStorage.removeItem('mizh_nami_history_v4');
+                } catch(e) {}
+
+                document.getElementById("copyBtn").style.display = "none";
+                document.getElementById("gameCard").classList.remove("flipped");
+                document.getElementById("turnText").innerText = "👉 Оберіть теми для нової гри";
+                refreshCounterUI();
+                buildHistoryUI();
+                openSetupScreen();
+            }
+        }
+
+        try {
+            var savedCategories = JSON.parse(localStorage.getItem('mizh_nami_categories_v5') || "null");
+            if (Array.isArray(savedCategories) && savedCategories.length) {
+                selectedCategories = savedCategories.filter(function(c) {
+                    return categoryOrder.indexOf(c) !== -1;
+                });
+            }
+        } catch(e) {}
+
+        renderCategoryPicker();
+        refreshCounterUI();
+        buildHistoryUI();
+
+        // Підготовка до наступного етапу: синхронізація двох гравців через Supabase.
+        // Значення нижче залишаються порожніми, поки ми не створимо проєкт.
+        const SUPABASE_URL = "";
+        const SUPABASE_KEY = "";
+    </script>
+</body>
+</html>
